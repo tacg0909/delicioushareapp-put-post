@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-meshitero-get-post
+meshitero-put-post
 *.zip
 
 # Test binary, built with `go test -c`
