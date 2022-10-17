@@ -3,9 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
-	"image"
-	"image/jpeg"
-	_ "image/jpeg"
 	"math/big"
 	"os"
 	"time"
@@ -16,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/google/uuid"
 	"github.com/guregu/dynamo"
-	"golang.org/x/image/draw"
+	"github.com/tacg0909/meshitero-put-post/resize"
 )
 
 func main() {
@@ -52,10 +49,10 @@ func MeshiteroPutPost(putItem PutItem) (err error) {
     }
     imageBuf := bytes.NewBuffer(imageBinary)
 
-    err = resize(imageBuf, 1000)
+    err = resize.Resize(imageBuf, 1000)
     err = putImageToBucket("large/" + postId + ".jpg", *imageBuf)
 
-    err = resize(imageBuf, 300)
+    err = resize.Resize(imageBuf, 300)
     err = putImageToBucket("small/" + postId + ".jpg", *imageBuf)
 
     // db := dynamo.New(session.New(), &aws.Config{
@@ -65,43 +62,6 @@ func MeshiteroPutPost(putItem PutItem) (err error) {
     return
 }
 
-func resize(imageBuf *bytes.Buffer, maxLength int) (err error) {
-    decordedImage, _, err := image.Decode(imageBuf)
-    if err != nil {
-        return
-    }
-    rectangle := decordedImage.Bounds()
-    width := rectangle.Dx()
-    height := rectangle.Dy()
-    targetWidth, targetHeight := targetSize(width, height, maxLength)
-    dst := image.NewRGBA(image.Rect(0, 0, targetWidth, targetHeight))
-    draw.CatmullRom.Scale(
-        dst,
-        dst.Bounds(),
-        decordedImage,
-        rectangle,
-        draw.Over,
-        nil,
-    )
-    err = jpeg.Encode(imageBuf, dst, &jpeg.Options{Quality: 100})
-    return
-}
-
-func targetSize(width int, height int, maxLength int) (targetWidth int, targetHeight int) {
-    gcd := int(new(big.Int).GCD(nil, nil, big.NewInt(int64(width)), big.NewInt(int64(height))).Int64())
-    widthRate := width / gcd
-    heightRate := height / gcd
-    if widthRate > heightRate {
-        rate := maxLength / widthRate
-        targetWidth = widthRate * rate
-        targetHeight = heightRate * rate
-        return
-    }
-    rate := maxLength / heightRate
-    targetWidth = widthRate * rate
-    targetHeight = heightRate * rate
-    return
-}
 
 func putImageToBucket(key string, image bytes.Buffer) (err error) {
     client := s3.New(session.New(), &aws.Config{
