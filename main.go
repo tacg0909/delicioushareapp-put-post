@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"time"
 
@@ -23,85 +24,110 @@ type EatingPlace struct {
     Name string `json:"name"`
     Address string `json:"address"`
     Website string `json:"website"`
-    Id string `json:"id"`
 }
 
 type PutItem struct {
-    // UserId string `json:"userId"`
-    // Base64Image string `json:"base64Image"`
-    Base64Image string `json:"image"`
-    // EatingPlace EatingPlace `json:"eatingPlace"`
+    UserId string `json:"userId"`
+    Base64Image string `json:"base64Image"`
+    EatingPlace EatingPlace `json:"eatingPlace"`
+    // Base64Image string `json:"image"`
 }
 
-type Event struct {
-    UserId string
-    PostedTime string
-    ImageUrl string
-}
-
-func MeshiteroPutPost(putItem PutItem) (err error) {
+func MeshiteroPutPost(putItem PutItem) error {
     postId := uuid.NewString()
 
-    imageBinary, err := base64.StdEncoding.DecodeString(putItem.Base64Image)
+    db := dynamo.New(session.New(), &aws.Config{
+        Region: aws.String(os.Getenv("DB_REGION")),
+    })
+    err := putUserPostToDetailTable(
+        db,
+        postId,
+        putItem.EatingPlace,
+        fmt.Sprintf("%s/large/%s.jpg", os.Getenv("S3_BUCKET_OBJECT_DOMAIN"), postId),
+    )
     if err != nil {
-        return
+        return err
+    }
+    err = putUserPostToOutlineTable(
+        db,
+        putItem.UserId,
+        fmt.Sprintf("%s/small/%s.jpg", os.Getenv("S3_BUCKET_OBJECT_DOMAIN"), postId),
+        postId,
+    )
+    if err != nil {
+        return err
+    }
+
+    err = putImage(putItem.Base64Image, postId)
+    return err
+}
+
+func putImage(base64Image string, postId string) error {
+    imageBinary, err := base64.StdEncoding.DecodeString(base64Image)
+    if err != nil {
+        return err
     }
     largeImageBuf := bytes.NewBuffer(imageBinary)
     smallImageBuf := *largeImageBuf
-
     largeImage, err := resize.Resize(largeImageBuf, 1000)
     if err != nil {
-        return
+        return err
     }
     err = putImageToBucket("large/" + postId + ".jpg", largeImage)
     if err != nil {
-        return
+        return err
     }
-
     smallImage, err := resize.Resize(&smallImageBuf, 300)
     if err != nil {
-        return
+        return err
     }
     err = putImageToBucket("small/" + postId + ".jpg", smallImage)
-    if err != nil {
-        return
-    }
-
-    // db := dynamo.New(session.New(), &aws.Config{
-    //     Region: aws.String(os.Getenv("DB_REGION")),
-    // })
-    // err = putUserPostToOutlineTable(db, putItem.UserId, putItem.ImageUrl, postId)
-    return
+    return err
 }
 
-func putImageToBucket(key string, image bytes.Buffer) (err error) {
+func putImageToBucket(key string, image bytes.Buffer) error {
     client := s3.New(session.New(), &aws.Config{
         Region: aws.String(os.Getenv("S3_BUCKET_REGION")),
     })
-    _, err = client.PutObject(&s3.PutObjectInput{
+    _, err := client.PutObject(&s3.PutObjectInput{
         Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
         Key: aws.String(key),
         Body: bytes.NewReader(image.Bytes()),
         ContentType: aws.String("image/jpeg"),
     })
-    return
+    return err
 }
 
-type putUserPostOutlineEvent struct {
+type UserPostOutline struct {
     UserId string
     PostedTime string
     SmallImageUrl string
-    PostId string
+    // PostId string
 }
 
-func putUserPostToOutlineTable(db *dynamo.DB, userId string, smallImageUrl string, postId string) (err error) {
-    table := db.Table(os.Getenv("USER_POSTS_OUTLINE_TABLE_NAME"))
-    e := putUserPostOutlineEvent{
+func putUserPostToOutlineTable(db *dynamo.DB, userId string, smallImageUrl string, postId string) error {
+    table := db.Table(os.Getenv("USER_POST_OUTLINE_TABLE_NAME"))
+    e := UserPostOutline{
         UserId: userId,
         PostedTime: time.Now().UTC().Format("2006-01-02-15-04-05-0700"),
         SmallImageUrl: smallImageUrl,
-        PostId: postId,
+        // PostId: postId,
     }
-    err = table.Put(e).If("attribute_not_exists(PostedTime)").Run()
-    return
+    return table.Put(e).If("attribute_not_exists(PostedTime)").Run()
+}
+
+type UserPostDetail struct {
+    PostId string `json:"postId"`
+    EatingPlace EatingPlace `json:"eatingPlace"`
+    LargeImageUrl string `json:"largeImageUrl"`
+}
+
+func putUserPostToDetailTable(db *dynamo.DB, postId string, eatingPlace EatingPlace, largeImageUrl string) error {
+    table := db.Table(os.Getenv("USER_POST_DETAIL_TABLE_NAME"))
+    item := UserPostDetail{
+        PostId: postId,
+        EatingPlace: eatingPlace,
+        LargeImageUrl: largeImageUrl,
+    }
+    return table.Put(item).If("attribute_not_exists(PostId)").Run()
 }
