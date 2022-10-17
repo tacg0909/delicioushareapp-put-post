@@ -46,13 +46,26 @@ func MeshiteroPutPost(putItem PutItem) (err error) {
     if err != nil {
         return
     }
-    imageBuf := bytes.NewBuffer(imageBinary)
+    largeImageBuf := bytes.NewBuffer(imageBinary)
+    smallImageBuf := *largeImageBuf
 
-    err = resize.Resize(imageBuf, 1000)
-    err = putImageToBucket("large/" + postId + ".jpg", *imageBuf)
+    largeImage, err := resize.Resize(largeImageBuf, 1000)
+    if err != nil {
+        return
+    }
+    err = putImageToBucket("large/" + postId + ".jpg", largeImage)
+    if err != nil {
+        return
+    }
 
-    err = resize.Resize(imageBuf, 300)
-    err = putImageToBucket("small/" + postId + ".jpg", *imageBuf)
+    smallImage, err := resize.Resize(&smallImageBuf, 300)
+    if err != nil {
+        return
+    }
+    err = putImageToBucket("small/" + postId + ".jpg", smallImage)
+    if err != nil {
+        return
+    }
 
     // db := dynamo.New(session.New(), &aws.Config{
     //     Region: aws.String(os.Getenv("DB_REGION")),
@@ -60,7 +73,6 @@ func MeshiteroPutPost(putItem PutItem) (err error) {
     // err = putUserPostToOutlineTable(db, putItem.UserId, putItem.ImageUrl, postId)
     return
 }
-
 
 func putImageToBucket(key string, image bytes.Buffer) (err error) {
     client := s3.New(session.New(), &aws.Config{
