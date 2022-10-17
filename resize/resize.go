@@ -11,17 +11,24 @@ import (
 	"golang.org/x/image/draw"
 )
 
-func Resize(imageBuf io.Reader, targetWidth int, targetHeight int) (resizedImage bytes.Buffer, err error) {
+func Resize(imageBuf io.Reader, maxLength int) (resizedImage bytes.Buffer, err error) {
     decodedImage, _, err := image.Decode(imageBuf)
     if err != nil {
         return
     }
+    r := decodedImage.Bounds()
+    targetWidth, targetHeight := calctargetsize.CalcTargetSize(r.Dx(), r.Dy(), maxLength)
+    resizedImage, err = resize(decodedImage, targetWidth, targetHeight)
+    return
+}
+
+func resize(img image.Image, targetWidth int, targetHeight int) (resizedImage bytes.Buffer, err error) {
     destination := image.NewRGBA(image.Rect(0, 0, targetWidth, targetHeight))
     draw.CatmullRom.Scale(
         destination,
         destination.Bounds(),
-        decodedImage,
-        decodedImage.Bounds(),
+        img,
+        img.Bounds(),
         draw.Over,
         nil,
     )
@@ -29,7 +36,7 @@ func Resize(imageBuf io.Reader, targetWidth int, targetHeight int) (resizedImage
     return
 }
 
-func resize(imageBuf *bytes.Buffer, maxLength int) (err error) {
+func resizeOld(imageBuf *bytes.Buffer, maxLength int) (err error) {
     decordedImage, _, err := image.Decode(imageBuf)
     if err != nil {
         return
