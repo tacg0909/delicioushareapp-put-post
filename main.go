@@ -102,7 +102,7 @@ type UserPostOutline struct {
     UserId string
     PostedTime string
     SmallImageUrl string
-    // PostId string
+    PostId string
 }
 
 func putUserPostToOutlineTable(db *dynamo.DB, userId string, smallImageUrl string, postId string) error {
@@ -111,7 +111,7 @@ func putUserPostToOutlineTable(db *dynamo.DB, userId string, smallImageUrl strin
         UserId: userId,
         PostedTime: time.Now().UTC().Format("2006-01-02-15-04-05-0700"),
         SmallImageUrl: smallImageUrl,
-        // PostId: postId,
+        PostId: postId,
     }
     return table.Put(e).If("attribute_not_exists(PostedTime)").Run()
 }
