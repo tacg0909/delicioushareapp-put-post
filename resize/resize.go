@@ -7,12 +7,13 @@ import (
 	_ "image/jpeg"
 	"io"
 
+	"github.com/disintegration/imaging"
 	"github.com/tacg0909/meshitero-put-post/calctargetsize"
 	"golang.org/x/image/draw"
 )
 
 func Resize(imageBuf io.Reader, maxLength int) (resizedImage bytes.Buffer, err error) {
-    decodedImage, _, err := image.Decode(imageBuf)
+    decodedImage, err := imaging.Decode(imageBuf, imaging.AutoOrientation(true))
     if err != nil {
         return
     }
