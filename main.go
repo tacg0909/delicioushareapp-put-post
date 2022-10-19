@@ -24,6 +24,7 @@ type EatingPlace struct {
     Name string `json:"name"`
     Address string `json:"address"`
     Website string `json:"website"`
+    Id string `json:"id"`
 }
 
 type PutItem struct {
