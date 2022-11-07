@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/tacg0909/meshitero-put-post/resize"
+	"github.com/tacg0909/delicioushareapp-put-post/resize"
 )
 
 func putImage(base64Image string, postId string) error {

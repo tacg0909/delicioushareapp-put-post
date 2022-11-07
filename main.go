@@ -13,23 +13,23 @@ import (
 )
 
 func main() {
-    lambda.Start(MeshiteroPutPost)
+    lambda.Start(delicioushareappPutPost)
 }
 
-type EatingPlace struct {
+type eatingPlace struct {
     Name string `json:"name"`
     Address string `json:"address"`
     Website string `json:"website"`
     Id string `json:"id"`
 }
 
-type PutItem struct {
+type putItem struct {
     UserId string `json:"userId"`
     Base64Image string `json:"base64Image"`
     EatingPlace EatingPlace `json:"eatingPlace"`
 }
 
-func MeshiteroPutPost(putItem PutItem) error {
+func delicioushareappPutPost(putItem PutItem) error {
     postId := uuid.NewString()
 
     postedTime := time.Now().UTC().Format("2006-01-02-15-04-05-0700")

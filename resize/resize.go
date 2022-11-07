@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/disintegration/imaging"
-	"github.com/tacg0909/meshitero-put-post/calctargetsize"
+	"github.com/tacg0909/delicioushareapp-put-post/calctargetsize"
 	"golang.org/x/image/draw"
 )
 
